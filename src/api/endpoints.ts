@@ -102,6 +102,44 @@ export const reportApi = {
     });
   },
 
+  getByEvaluationId: async (evaluationId: number, accessToken: string): Promise<Report | null> => {
+    // Buscar relatório usando rota específica: GET /evaluations/{id}/report
+    try {
+      const report = await apiClient.get<Report>(`/evaluations/${evaluationId}/report`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      return report;
+    } catch (error: any) {
+      // Se retornar 404, significa que não existe relatório para esta avaliação
+      if (error?.response?.status === 404) {
+        console.log(`No report found for evaluation_id: ${evaluationId}`);
+        return null;
+      }
+      // Outros erros (500, network, etc)
+      console.error('Error fetching report by evaluation_id:', error);
+      throw error;
+    }
+  },
+
+  update: (id: number, data: { summary?: string; status?: 'draft' | 'finalized' }, accessToken: string): Promise<Report> => {
+    return apiClient.patch(`/reports/${id}`, data, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
+
+  uploadFile: (id: number, formData: FormData, accessToken: string): Promise<void> => {
+    return apiClient.post(`/reports/${id}/file`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
+
   getFileUrl: (id: number, accessToken: string): Promise<ReportFileResponse> => {
     return apiClient.get(`/reports/${id}/file`, {
       headers: {

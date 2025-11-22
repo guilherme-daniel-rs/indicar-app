@@ -8,18 +8,20 @@ import {
   Alert,
   Image,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppStackNavigationProp } from '@/navigation/types';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
-import { Evaluation, EvaluationStatus } from '@/api/types';
+import { Evaluation, EvaluationStatus, Report } from '@/api/types';
 import { evaluationApi, reportApi } from '@/api/endpoints';
 import { Button } from '@/components/Button';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
+import { FormTextInput } from '@/components/FormTextInput';
 import { theme } from '@/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -47,16 +49,55 @@ export const EvaluationDetailScreen: React.FC = () => {
   const { evaluationId } = route.params as { evaluationId: number };
   console.log('EvaluationDetailScreen loaded with evaluationId:', evaluationId);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [report, setReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isSavingReport, setIsSavingReport] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [reportSummary, setReportSummary] = useState('');
+  const [isEditingReport, setIsEditingReport] = useState(false);
   const { showToast } = useUIStore();
   const { accessToken, user } = useAuthStore();
 
   useEffect(() => {
     loadEvaluation();
   }, [evaluationId]);
+
+  const loadReport = async () => {
+    if (!accessToken) return;
+    
+    try {
+      // Buscar relatório usando GET /evaluations/{id}/report
+      console.log(`Buscando relatório para evaluation_id: ${evaluationId}`);
+      const foundReport = await reportApi.getByEvaluationId(evaluationId, accessToken);
+      if (foundReport) {
+        console.log('Relatório encontrado:', foundReport);
+        setReport(foundReport);
+        setReportSummary(foundReport.summary || '');
+        // Atualizar evaluation com o report encontrado
+        if (evaluation) {
+          setEvaluation({ ...evaluation, report: foundReport });
+        }
+      } else {
+        console.log('Nenhum relatório encontrado para esta avaliação (404)');
+        // Limpar report se não existir
+        setReport(null);
+        setReportSummary('');
+      }
+    } catch (error: any) {
+      // Se for 404, é normal - relatório ainda não foi criado
+      if (error?.response?.status === 404) {
+        console.log('Relatório ainda não foi criado para esta avaliação');
+        setReport(null);
+        setReportSummary('');
+      } else {
+        // Outros erros (500, network, etc) - logar mas não bloquear a UI
+        console.error('Erro ao buscar relatório:', error);
+      }
+    }
+  };
 
   const loadEvaluation = async () => {
     try {
@@ -68,6 +109,18 @@ export const EvaluationDetailScreen: React.FC = () => {
       const evaluationData = await evaluationApi.getById(evaluationId, accessToken);
       setEvaluation(evaluationData);
       setPhotos(evaluationData.photos?.map(photo => photo.photo_url) || []);
+      
+      // Se a API retornou o report, usar ele
+      if (evaluationData.report) {
+        setReport(evaluationData.report);
+        setReportSummary(evaluationData.report.summary || '');
+      } else {
+        // Se não retornou na evaluation, tentar buscar separadamente
+        // Apenas para avaliações que podem ter relatório
+        if (evaluationData.status === 'in_progress' || evaluationData.status === 'completed') {
+          await loadReport();
+        }
+      }
     } catch (error: any) {
       console.error('Error loading evaluation:', error);
       const errorMessage = error?.response?.data?.message || 'Erro ao carregar avaliação';
@@ -120,14 +173,15 @@ export const EvaluationDetailScreen: React.FC = () => {
   };
 
   const handleViewReport = async () => {
-    if (!evaluation?.report) return;
+    const reportToView = report || evaluation?.report;
+    if (!reportToView) return;
 
     try {
       if (!accessToken) {
         showToast('error', 'Token de acesso não encontrado');
         return;
       }
-      const response = await reportApi.getFileUrl(evaluation.report.id, accessToken);
+      const response = await reportApi.getFileUrl(reportToView.id, accessToken);
       navigation.navigate('ReportViewer', { fileUrl: response.url });
     } catch (error: any) {
       console.error('Error getting report file:', error);
@@ -279,6 +333,139 @@ export const EvaluationDetailScreen: React.FC = () => {
     );
   };
 
+  const handleCreateReport = async () => {
+    if (!accessToken || !evaluation) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    try {
+      setIsSavingReport(true);
+      const newReport = await reportApi.create(
+        {
+          evaluation_id: evaluationId,
+          summary: reportSummary.trim() || '',
+        },
+        accessToken
+      );
+      // Salvar o relatório no estado
+      setReport(newReport);
+      setReportSummary(newReport.summary || '');
+      // Atualizar a evaluation com o report
+      if (evaluation) {
+        setEvaluation({ ...evaluation, report: newReport });
+      }
+      showToast('success', 'Relatório criado com sucesso!');
+      setIsEditingReport(false);
+    } catch (error: any) {
+      console.error('Error creating report:', error);
+      const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao criar relatório';
+      showToast('error', errorMessage);
+    } finally {
+      setIsSavingReport(false);
+    }
+  };
+
+  const handleUpdateReport = async () => {
+    if (!accessToken || !report) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    try {
+      setIsSavingReport(true);
+      const updatedReport = await reportApi.update(
+        report.id,
+        { summary: reportSummary || undefined },
+        accessToken
+      );
+      // Atualizar o relatório no estado
+      setReport(updatedReport);
+      setReportSummary(updatedReport.summary || '');
+      // Atualizar a evaluation com o report atualizado
+      if (evaluation) {
+        setEvaluation({ ...evaluation, report: updatedReport });
+      }
+      showToast('success', 'Relatório atualizado com sucesso!');
+      setIsEditingReport(false);
+    } catch (error: any) {
+      console.error('Error updating report:', error);
+      const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao atualizar relatório';
+      showToast('error', errorMessage);
+    } finally {
+      setIsSavingReport(false);
+    }
+  };
+
+  const handleFinalizeReport = async () => {
+    if (!accessToken || !report) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    Alert.alert(
+      'Finalizar Relatório',
+      'Tem certeza que deseja finalizar este relatório? Após finalizar, não será possível editá-lo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Finalizar',
+          onPress: async () => {
+            try {
+              setIsSavingReport(true);
+              const finalizedReport = await reportApi.update(
+                report.id,
+                { status: 'finalized' },
+                accessToken
+              );
+              // Atualizar o relatório no estado
+              setReport(finalizedReport);
+              // Atualizar a evaluation com o report finalizado
+              if (evaluation) {
+                setEvaluation({ ...evaluation, report: finalizedReport });
+              }
+              showToast('success', 'Relatório finalizado com sucesso!');
+            } catch (error: any) {
+              console.error('Error finalizing report:', error);
+              const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao finalizar relatório';
+              showToast('error', errorMessage);
+            } finally {
+              setIsSavingReport(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleUploadPdf = async () => {
+    if (!accessToken || !evaluation?.report) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    // TODO: Implementar seleção de PDF usando expo-document-picker
+    // Por enquanto, mostrar mensagem informativa
+    Alert.alert(
+      'Upload de PDF',
+      'Funcionalidade de upload de PDF será implementada em breve. Por enquanto, você pode criar o relatório com o resumo.',
+      [{ text: 'OK' }]
+    );
+    
+    // Quando expo-document-picker estiver instalado, usar:
+    // import * as DocumentPicker from 'expo-document-picker';
+    // const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
+    // if (!result.canceled) {
+    //   const formData = new FormData();
+    //   formData.append('file', {
+    //     uri: result.assets[0].uri,
+    //     type: 'application/pdf',
+    //     name: result.assets[0].name,
+    //   } as any);
+    //   await reportApi.uploadFile(evaluation.report.id, formData, accessToken);
+    // }
+  };
+
   if (isLoading) {
     return <LoadingSpinner fullScreen message="Carregando avaliação..." />;
   }
@@ -375,8 +562,186 @@ export const EvaluationDetailScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Report */}
-        {evaluation.report && (
+        {/* Report Section - Show when in_progress and user is evaluator, or when report exists (any status) */}
+        {((evaluation.status === 'in_progress' && user?.id === evaluation.evaluator_id) ||
+          (report || evaluation.report)) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Relatório Técnico</Text>
+              
+              {!report && !evaluation.report && evaluation.status === 'in_progress' && user?.id === evaluation.evaluator_id && (
+                <View style={styles.reportFormCard}>
+                  <FormTextInput
+                    label="Resumo da Avaliação (opcional)"
+                    placeholder="Descreva os principais pontos da avaliação do veículo..."
+                    value={reportSummary}
+                    onChangeText={setReportSummary}
+                    multiline
+                    numberOfLines={6}
+                    textAlignVertical="top"
+                    containerStyle={styles.reportInputContainer}
+                  />
+                  <Button
+                    title="Criar Relatório"
+                    onPress={handleCreateReport}
+                    fullWidth
+                    loading={isSavingReport}
+                    disabled={isSavingReport}
+                  />
+                </View>
+              )}
+              
+              {(report || evaluation.report) ? (
+                // Relatório existente
+                <View style={styles.reportCard}>
+                  <View style={styles.reportHeader}>
+                    <View style={styles.reportInfo}>
+                      <Ionicons
+                        name="document-text"
+                        size={24}
+                        color={
+                          (report || evaluation.report)?.status === 'finalized'
+                            ? theme.colors.success
+                            : theme.colors.warning
+                        }
+                      />
+                      <View style={styles.reportDetails}>
+                        <Text style={styles.reportTitle}>Relatório</Text>
+                        <Text style={styles.reportSubtitle}>
+                          Status:{' '}
+                          {(report || evaluation.report)?.status === 'finalized'
+                            ? 'Finalizado'
+                            : 'Rascunho'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {(report || evaluation.report)?.status === 'draft' && evaluation.status === 'in_progress' && user?.id === evaluation.evaluator_id && (
+                    <>
+                      {isEditingReport ? (
+                        <View style={styles.reportEditForm}>
+                          <FormTextInput
+                            label="Resumo da Avaliação"
+                            placeholder="Descreva os principais pontos da avaliação..."
+                            value={reportSummary}
+                            onChangeText={setReportSummary}
+                            multiline
+                            numberOfLines={6}
+                            textAlignVertical="top"
+                            containerStyle={styles.reportInputContainer}
+                          />
+                          <View style={styles.reportActionsRow}>
+                            <Button
+                              title="Cancelar"
+                              onPress={() => {
+                                setIsEditingReport(false);
+                                setReportSummary(
+                                  (report || evaluation.report)?.summary || ''
+                                );
+                              }}
+                              variant="outline"
+                              style={styles.reportActionButton}
+                            />
+                            <Button
+                              title="Salvar"
+                              onPress={handleUpdateReport}
+                              loading={isSavingReport}
+                              disabled={isSavingReport}
+                              style={styles.reportActionButton}
+                            />
+                          </View>
+                        </View>
+                      ) : (
+                        <>
+                          {(report || evaluation.report)?.summary && (
+                            <View style={styles.reportSummaryContainer}>
+                              <Text style={styles.reportSummaryLabel}>
+                                Resumo:
+                              </Text>
+                              <Text style={styles.reportSummaryText}>
+                                {(report || evaluation.report)?.summary}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.reportActionsRow}>
+                            <Button
+                              title="Editar Resumo"
+                              onPress={() => {
+                                setIsEditingReport(true);
+                                setReportSummary(
+                                  (report || evaluation.report)?.summary || ''
+                                );
+                              }}
+                              variant="outline"
+                              size="sm"
+                              style={styles.reportActionButton}
+                            />
+                            <Button
+                              title="Upload PDF"
+                              onPress={handleUploadPdf}
+                              variant="outline"
+                              size="sm"
+                              loading={isUploadingPdf}
+                              disabled={isUploadingPdf}
+                              style={styles.reportActionButton}
+                            />
+                          </View>
+                          <Button
+                            title="Finalizar Relatório"
+                            onPress={handleFinalizeReport}
+                            fullWidth
+                            loading={isSavingReport}
+                            disabled={isSavingReport}
+                            style={styles.finalizeButton}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* Mostrar relatório em draft quando completed (sem edição) */}
+                  {(report || evaluation.report)?.status === 'draft' && evaluation.status === 'completed' && (
+                    <>
+                      {(report || evaluation.report)?.summary && (
+                        <View style={styles.reportSummaryContainer}>
+                          <Text style={styles.reportSummaryLabel}>
+                            Resumo:
+                          </Text>
+                          <Text style={styles.reportSummaryText}>
+                            {(report || evaluation.report)?.summary}
+                          </Text>
+                        </View>
+                      )}
+                      <Text style={styles.reportWarning}>
+                        ⚠️ Este relatório está em rascunho e não foi finalizado.
+                      </Text>
+                    </>
+                  )}
+
+                  {(report || evaluation.report)?.status === 'finalized' && (
+                    <>
+                      {(report || evaluation.report)?.summary && (
+                        <View style={styles.reportSummaryContainer}>
+                          <Text style={styles.reportSummaryText}>
+                            {(report || evaluation.report)?.summary}
+                          </Text>
+                        </View>
+                      )}
+                      <Button
+                        title="Ver PDF do Laudo"
+                        onPress={handleViewReport}
+                        variant="outline"
+                        fullWidth
+                      />
+                    </>
+                  )}
+                </View>
+              ) : null}
+            </View>
+          )}
+
+        {/* Report - Show when completed and has report */}
+        {evaluation.status === 'completed' && evaluation.report && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Laudo</Text>
             <View style={styles.reportCard}>
@@ -579,5 +944,57 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.sm,
     fontWeight: theme.typography.fontWeight.medium,
+  },
+  reportFormCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    ...theme.shadows.sm,
+  },
+  reportInputContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  reportHeader: {
+    marginBottom: theme.spacing.md,
+  },
+  reportEditForm: {
+    marginTop: theme.spacing.md,
+  },
+  reportActionsRow: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.md,
+  },
+  reportActionButton: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
+  finalizeButton: {
+    marginTop: theme.spacing.md,
+  },
+  reportSummaryContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+  },
+  reportSummaryLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  reportSummaryText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.typography.lineHeight.relaxed * theme.typography.fontSize.md,
+  },
+  reportWarning: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.warning,
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+    textAlign: 'center',
   },
 });
