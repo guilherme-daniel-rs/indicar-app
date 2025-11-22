@@ -65,11 +65,12 @@ export type Evaluation = {
 export type EvaluationPhoto = {
   id: number;
   evaluation_id: number;
-  s3_bucket: string;
-  s3_key: string;
-  content_type: string;
-  size_bytes: number;
-  photo_url: string;
+  s3_bucket?: string;
+  s3_key?: string;
+  content_type?: string;
+  size_bytes?: number;
+  photo_url?: string; // Campo legado, pode não estar presente
+  url: string; // Campo retornado pela API em evaluations/:id/photos
   created_at: string;
 };
 

@@ -129,6 +129,39 @@ export const PhotoPicker: React.FC<PhotoPickerProps> = ({
 
   const canAddMore = photos.length < maxPhotos;
 
+  // Se já houver fotos, mostrar apenas o botão de adicionar (sem mostrar as fotos novamente)
+  if (photos.length > 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>
+          Fotos ({photos.length}/{maxPhotos})
+        </Text>
+        {canAddMore && (
+          <TouchableOpacity
+            style={[styles.addButton, disabled && styles.disabled]}
+            onPress={handleAddPhoto}
+            disabled={disabled || isLoading}
+          >
+            <Ionicons
+              name="camera"
+              size={24}
+              color={disabled ? theme.colors.textTertiary : theme.colors.primary}
+            />
+            <Text
+              style={[
+                styles.addButtonText,
+                disabled && styles.disabledText,
+              ]}
+            >
+              {isLoading ? 'Adicionando...' : 'Adicionar'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
+
+  // Se não houver fotos, mostrar o picker completo
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
@@ -140,19 +173,6 @@ export const PhotoPicker: React.FC<PhotoPickerProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {photos.map((photo, index) => (
-          <View key={index} style={styles.photoContainer}>
-            <Image source={{ uri: photo }} style={styles.photo} />
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => removePhoto(index)}
-              disabled={disabled}
-            >
-              <Ionicons name="close" size={16} color={theme.colors.white} />
-            </TouchableOpacity>
-          </View>
-        ))}
-        
         {canAddMore && (
           <TouchableOpacity
             style={[styles.addButton, disabled && styles.disabled]}

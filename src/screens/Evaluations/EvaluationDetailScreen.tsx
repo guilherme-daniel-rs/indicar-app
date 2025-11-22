@@ -97,6 +97,20 @@ export const EvaluationDetailScreen: React.FC = () => {
     }
   };
 
+  const loadPhotos = async () => {
+    if (!accessToken) return;
+    
+    try {
+      const photosData = await evaluationApi.getPhotos(evaluationId, accessToken);
+      // Usar o campo 'url' retornado pela API
+      const photoUrls = photosData.map(photo => photo.url || photo.photo_url || '');
+      setPhotos(photoUrls.filter(url => url !== ''));
+    } catch (error: any) {
+      // Se der erro ao buscar fotos, não bloquear a UI
+      console.log('Error loading photos:', error);
+    }
+  };
+
   const loadEvaluation = async () => {
     try {
       setIsLoading(true);
@@ -106,7 +120,9 @@ export const EvaluationDetailScreen: React.FC = () => {
       }
       const evaluationData = await evaluationApi.getById(evaluationId, accessToken);
       setEvaluation(evaluationData);
-      setPhotos(evaluationData.photos?.map(photo => photo.photo_url) || []);
+      
+      // Buscar fotos separadamente usando a rota evaluations/:id/photos
+      await loadPhotos();
       
       // Se a API retornou o report, usar ele
       if (evaluationData.report) {
@@ -158,8 +174,8 @@ export const EvaluationDetailScreen: React.FC = () => {
         await evaluationApi.uploadPhoto(evaluationId, formData, accessToken);
       }
 
-      // Reload evaluation to get updated photos
-      await loadEvaluation();
+      // Buscar fotos atualizadas usando a rota evaluations/:id/photos
+      await loadPhotos();
       showToast('success', 'Fotos enviadas com sucesso!');
     } catch (error: any) {
       console.error('Error uploading photos:', error);
@@ -186,8 +202,8 @@ export const EvaluationDetailScreen: React.FC = () => {
       if (error?.response?.status === 404) {
         showToast('info', 'PDF do laudo ainda não foi enviado');
       } else {
-        console.error('Error getting report file:', error);
-        showToast('error', 'Erro ao abrir laudo');
+      console.error('Error getting report file:', error);
+      showToast('error', 'Erro ao abrir laudo');
       }
     }
   };
