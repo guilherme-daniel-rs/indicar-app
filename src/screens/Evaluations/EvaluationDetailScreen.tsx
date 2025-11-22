@@ -70,7 +70,6 @@ export const EvaluationDetailScreen: React.FC = () => {
     
     try {
       // Buscar relatório usando GET /evaluations/{id}/report
-      console.log(`Buscando relatório para evaluation_id: ${evaluationId}`);
       const foundReport = await reportApi.getByEvaluationId(evaluationId, accessToken);
       if (foundReport) {
         console.log('Relatório encontrado:', foundReport);
@@ -81,15 +80,14 @@ export const EvaluationDetailScreen: React.FC = () => {
           setEvaluation({ ...evaluation, report: foundReport });
         }
       } else {
-        console.log('Nenhum relatório encontrado para esta avaliação (404)');
-        // Limpar report se não existir
+        // Relatório não existe ainda (404) - comportamento normal
         setReport(null);
         setReportSummary('');
       }
     } catch (error: any) {
       // Se for 404, é normal - relatório ainda não foi criado
+      // Não logar como erro, pois é comportamento esperado
       if (error?.response?.status === 404) {
-        console.log('Relatório ainda não foi criado para esta avaliação');
         setReport(null);
         setReportSummary('');
       } else {
@@ -184,8 +182,13 @@ export const EvaluationDetailScreen: React.FC = () => {
       const response = await reportApi.getFileUrl(reportToView.id, accessToken);
       navigation.navigate('ReportViewer', { fileUrl: response.url });
     } catch (error: any) {
-      console.error('Error getting report file:', error);
-      showToast('error', 'Erro ao abrir laudo');
+      // Se for 404, significa que o PDF não foi enviado ainda
+      if (error?.response?.status === 404) {
+        showToast('info', 'PDF do laudo ainda não foi enviado');
+      } else {
+        console.error('Error getting report file:', error);
+        showToast('error', 'Erro ao abrir laudo');
+      }
     }
   };
 
@@ -298,8 +301,25 @@ export const EvaluationDetailScreen: React.FC = () => {
       return;
     }
 
+    // Validar se já está concluída
+    if (evaluation.status === 'completed') {
+      showToast('info', 'Esta avaliação já está concluída');
+      return;
+    }
+
+    // Validar se está no status correto para concluir
+    if (evaluation.status !== 'in_progress') {
+      showToast('error', `Não é possível concluir uma avaliação com status "${statusLabels[evaluation.status]}"`);
+      return;
+    }
+
     if (evaluation.evaluator_id !== user.id) {
       showToast('error', 'Apenas o avaliador designado pode concluir a avaliação');
+      return;
+    }
+
+    // Prevenir chamadas duplicadas
+    if (isUpdatingStatus) {
       return;
     }
 
@@ -313,13 +333,21 @@ export const EvaluationDetailScreen: React.FC = () => {
           onPress: async () => {
             try {
               setIsUpdatingStatus(true);
-              await evaluationApi.update(
+              const updatedEvaluation = await evaluationApi.update(
                 evaluationId,
                 { status: 'completed' },
                 accessToken
               );
+              
+              // Atualizar estado imediatamente para evitar chamadas duplicadas
+              setEvaluation(updatedEvaluation);
+              
               showToast('success', 'Avaliação concluída com sucesso!');
-              await loadEvaluation();
+              
+              // Redirecionar para a home após um pequeno delay para mostrar o toast
+              setTimeout(() => {
+                navigation.goBack();
+              }, 500);
             } catch (error: any) {
               console.error('Error completing evaluation:', error);
               const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao concluir avaliação';
@@ -907,9 +935,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     ...theme.shadows.sm,
   },
   reportInfo: {
@@ -955,7 +980,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   reportHeader: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   reportEditForm: {
     marginTop: theme.spacing.md,
@@ -972,8 +997,9 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   reportSummaryContainer: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.borderRadius.md,
   },
@@ -981,7 +1007,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.xs / 2,
   },
   reportSummaryText: {
     fontSize: theme.typography.fontSize.md,

@@ -113,12 +113,11 @@ export const reportApi = {
       return report;
     } catch (error: any) {
       // Se retornar 404, significa que não existe relatório para esta avaliação
+      // Isso é comportamento esperado quando o relatório ainda não foi criado
       if (error?.response?.status === 404) {
-        console.log(`No report found for evaluation_id: ${evaluationId}`);
         return null;
       }
-      // Outros erros (500, network, etc)
-      console.error('Error fetching report by evaluation_id:', error);
+      // Outros erros (500, network, etc) - propagar para tratamento adequado
       throw error;
     }
   },

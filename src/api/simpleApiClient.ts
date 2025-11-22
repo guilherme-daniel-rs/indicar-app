@@ -97,18 +97,25 @@ class SimpleApiClient {
       },
       (error) => {
         const fullUrl = error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown';
-        console.error('Simple API Error:', {
-          status: error.response?.status,
-          url: error.config?.url,
-          fullUrl: fullUrl,
-          message: error.message,
-          code: error.code,
-          data: error.response?.data,
-          request: error.request ? {
-            readyState: error.request.readyState,
-            status: error.request.status,
-          } : null,
-        });
+        const is404 = error.response?.status === 404;
+        const isReportNotFound = error.config?.url?.includes('/report') && is404;
+        
+        // Não logar 404 como erro quando for busca de relatório (comportamento esperado)
+        if (!isReportNotFound) {
+          // Logar outros erros normalmente
+          console.error('Simple API Error:', {
+            status: error.response?.status,
+            url: error.config?.url,
+            fullUrl: fullUrl,
+            message: error.message,
+            code: error.code,
+            data: error.response?.data,
+            request: error.request ? {
+              readyState: error.request.readyState,
+              status: error.request.status,
+            } : null,
+          });
+        }
         
         return Promise.reject(error);
       }
