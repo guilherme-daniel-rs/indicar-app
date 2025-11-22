@@ -285,12 +285,15 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.white,
     justifyContent: 'center',
-    paddingRight: theme.spacing.sm,
+    height: theme.layout.inputHeight + theme.spacing.sm, // Altura maior para evitar corte
+    paddingVertical: 0,
   },
   picker: {
-    height: theme.layout.inputHeight,
+    height: '100%',
     paddingLeft: theme.spacing.md,
     paddingRight: theme.spacing.xl, // Espaço extra para o ícone dropdown
+    paddingVertical: 0,
+    justifyContent: 'center',
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,
