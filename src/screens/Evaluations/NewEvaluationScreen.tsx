@@ -81,8 +81,11 @@ export const NewEvaluationScreen: React.FC = () => {
       const evaluation = await evaluationApi.create(data, accessToken);
       console.log('Evaluation created:', evaluation);
       showToast('success', 'Avaliação criada com sucesso!');
-      console.log('Navigating to EvaluationDetail with ID:', evaluation.id);
-      navigation.navigate('EvaluationDetail', { evaluationId: evaluation.id });
+      
+      // Redirecionar para a home após um pequeno delay para mostrar o toast
+      setTimeout(() => {
+        navigation.goBack();
+      }, 500);
     } catch (error: any) {
       console.error('Error creating evaluation:', error);
       const errorMessage = error?.response?.data?.message || 'Erro ao criar avaliação';
