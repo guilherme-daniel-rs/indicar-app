@@ -208,23 +208,6 @@ export const EvaluationDetailScreen: React.FC = () => {
     }
   };
 
-  const handleRemovePhoto = (index: number) => {
-    Alert.alert(
-      'Remover foto',
-      'Tem certeza que deseja remover esta foto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: () => {
-            const newPhotos = photos.filter((_, i) => i !== index);
-            setPhotos(newPhotos);
-          },
-        },
-      ]
-    );
-  };
 
   const handleAcceptEvaluation = async () => {
     if (!accessToken || !user) {
@@ -582,16 +565,12 @@ export const EvaluationDetailScreen: React.FC = () => {
           ) : (
             <View style={styles.photosGrid}>
               {photos.map((photo, index) => (
-                <TouchableOpacity
+                <View
                   key={index}
                   style={styles.photoContainer}
-                  onPress={() => handleRemovePhoto(index)}
                 >
                   <Image source={{ uri: photo }} style={styles.photo} />
-                  <View style={styles.removeButton}>
-                    <Ionicons name="close" size={16} color={theme.colors.white} />
-                  </View>
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
@@ -935,17 +914,6 @@ const styles = StyleSheet.create({
     width: photoSize,
     height: photoSize,
     borderRadius: theme.borderRadius.md,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   reportCard: {
     backgroundColor: theme.colors.white,

@@ -122,11 +122,6 @@ export const PhotoPicker: React.FC<PhotoPickerProps> = ({
     onPhotosChange([...photos, uri]);
   };
 
-  const removePhoto = (index: number) => {
-    const newPhotos = photos.filter((_, i) => i !== index);
-    onPhotosChange(newPhotos);
-  };
-
   const canAddMore = photos.length < maxPhotos;
 
   // Se já houver fotos, mostrar apenas o botão de adicionar (sem mostrar as fotos novamente)
