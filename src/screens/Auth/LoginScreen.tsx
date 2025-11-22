@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigation } from '@react-navigation/native';
+import { AuthNavigationProp } from '@/navigation/types';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/Button';
@@ -19,6 +21,7 @@ import { loginSchema, LoginFormData } from '@/utils/validators';
 import { theme } from '@/theme';
 
 export const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<AuthNavigationProp>();
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
   const { showToast } = useUIStore();
@@ -38,11 +41,16 @@ export const LoginScreen: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
+      console.log('Tentando fazer login com dados:', data);
+      
+      // Chamar a API real
       await login(data);
+      
+      console.log('Login realizado com sucesso!');
       showToast('success', 'Login realizado com sucesso!');
     } catch (error: any) {
       console.error('Login error:', error);
-      const errorMessage = error?.response?.data?.message || 'Erro ao fazer login';
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao fazer login';
       showToast('error', errorMessage);
     } finally {
       setIsLoading(false);
@@ -50,7 +58,7 @@ export const LoginScreen: React.FC = () => {
   };
 
   const navigateToSignup = () => {
-    // Navigation will be handled by the navigator
+    navigation.navigate('Signup');
   };
 
   if (isLoading) {

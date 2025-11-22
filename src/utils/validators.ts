@@ -28,6 +28,15 @@ export const signupSchema = z.object({
     .string()
     .optional()
     .refine((val) => !val || val.length >= 10, 'Telefone deve ter pelo menos 10 dígitos'),
+  role: z
+    .string()
+    .min(1, 'Role é obrigatório'),
+  document_id: z
+    .string()
+    .optional(),
+  bio: z
+    .string()
+    .optional(),
 });
 
 export const updateProfileSchema = z.object({
@@ -54,15 +63,18 @@ export const createEvaluationSchema = z.object({
     .string()
     .min(1, 'Modelo do veículo é obrigatório')
     .max(50, 'Modelo deve ter no máximo 50 caracteres'),
+  vehicle_plate: z
+    .string()
+    .min(1, 'Placa do veículo é obrigatória')
+    .max(10, 'Placa deve ter no máximo 10 caracteres'),
   vehicle_year: z
     .number()
     .min(1900, 'Ano deve ser maior que 1900')
-    .max(new Date().getFullYear() + 1, 'Ano não pode ser no futuro')
-    .optional(),
+    .max(new Date().getFullYear() + 1, 'Ano não pode ser no futuro'),
   notes: z
     .string()
-    .max(500, 'Observações devem ter no máximo 500 caracteres')
-    .optional(),
+    .min(1, 'Observações são obrigatórias')
+    .max(500, 'Observações devem ter no máximo 500 caracteres'),
 });
 
 export const updateEvaluationSchema = z.object({

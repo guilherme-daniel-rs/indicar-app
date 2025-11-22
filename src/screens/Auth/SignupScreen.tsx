@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigation } from '@react-navigation/native';
+import { AuthNavigationProp } from '@/navigation/types';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/Button';
@@ -19,6 +21,7 @@ import { signupSchema, SignupFormData } from '@/utils/validators';
 import { theme } from '@/theme';
 
 export const SignupScreen: React.FC = () => {
+  const navigation = useNavigation<AuthNavigationProp>();
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuthStore();
   const { showToast } = useUIStore();
@@ -34,17 +37,43 @@ export const SignupScreen: React.FC = () => {
       email: '',
       password: '',
       phone: '',
+      role: 'evaluator',
+      document_id: '',
+      bio: '',
     },
   });
 
   const onSubmit = async (data: SignupFormData) => {
     try {
       setIsLoading(true);
-      await signup(data);
+      console.log('Tentando criar conta com dados:', data);
+      
+      // Preparar dados para a API
+      const signupData = {
+        email: data.email,
+        full_name: data.full_name,
+        password: data.password,
+        phone: data.phone || undefined,
+        role: data.role,
+        document_id: data.document_id || undefined,
+        bio: data.bio || undefined,
+      };
+      
+      console.log('Dados preparados para API:', signupData);
+      
+      // Chamar a API real
+      await signup(signupData);
+      
+      console.log('Conta criada com sucesso!');
       showToast('success', 'Conta criada com sucesso!');
     } catch (error: any) {
       console.error('Signup error:', error);
-      const errorMessage = error?.response?.data?.message || 'Erro ao criar conta';
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao criar conta';
       showToast('error', errorMessage);
     } finally {
       setIsLoading(false);
@@ -52,7 +81,7 @@ export const SignupScreen: React.FC = () => {
   };
 
   const navigateToLogin = () => {
-    // Navigation will be handled by the navigator
+    navigation.navigate('Login');
   };
 
   if (isLoading) {

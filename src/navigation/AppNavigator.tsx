@@ -2,9 +2,11 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth.store';
 import { theme } from '@/theme';
+import { AuthStackParamList, AppStackParamList, MainTabParamList } from './types';
 
 // Auth screens
 import { LoginScreen } from '@/screens/Auth/LoginScreen';
@@ -24,83 +26,88 @@ import { ProfileScreen } from '@/screens/Account/ProfileScreen';
 // Loading screen
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const AuthStack = createStackNavigator<AuthStackParamList>();
+const AppStack = createStackNavigator<AppStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Auth Stack
-const AuthStack = () => (
-  <Stack.Navigator
+// Auth Stack Component
+const AuthStackComponent = () => (
+  <AuthStack.Navigator
     screenOptions={{
       headerShown: false,
     }}
   >
-    <Stack.Screen name="Login" component={LoginScreen} />
-    <Stack.Screen name="Signup" component={SignupScreen} />
-  </Stack.Navigator>
+    <AuthStack.Screen name="Login" component={LoginScreen} />
+    <AuthStack.Screen name="Signup" component={SignupScreen} />
+  </AuthStack.Navigator>
 );
 
 // Main Tab Navigator
-const MainTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      tabBarIcon: ({ focused, color, size }) => {
-        let iconName: keyof typeof Ionicons.glyphMap;
+const MainTabs = () => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
 
-        if (route.name === 'Evaluations') {
-          iconName = focused ? 'list' : 'list-outline';
-        } else if (route.name === 'NewEvaluation') {
-          iconName = focused ? 'add-circle' : 'add-circle-outline';
-        } else if (route.name === 'Account') {
-          iconName = focused ? 'person' : 'person-outline';
-        } else {
-          iconName = 'help-outline';
-        }
+          if (route.name === 'Evaluations') {
+            iconName = focused ? 'list' : 'list-outline';
+          } else if (route.name === 'NewEvaluation') {
+            iconName = focused ? 'add-circle' : 'add-circle-outline';
+          } else if (route.name === 'Account') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else {
+            iconName = 'help-outline';
+          }
 
-        return <Ionicons name={iconName} size={size} color={color} />;
-      },
-      tabBarActiveTintColor: theme.colors.primary,
-      tabBarInactiveTintColor: theme.colors.textTertiary,
-      tabBarStyle: {
-        height: theme.layout.tabBarHeight,
-        paddingBottom: theme.spacing.sm,
-        paddingTop: theme.spacing.sm,
-      },
-      headerShown: false,
-    })}
-  >
-    <Tab.Screen
-      name="Evaluations"
-      component={MyEvaluationsScreen}
-      options={{
-        title: 'Minhas Avaliações',
-      }}
-    />
-    <Tab.Screen
-      name="NewEvaluation"
-      component={NewEvaluationScreen}
-      options={{
-        title: 'Nova Avaliação',
-      }}
-    />
-    <Tab.Screen
-      name="Account"
-      component={ProfileScreen}
-      options={{
-        title: 'Conta',
-      }}
-    />
-  </Tab.Navigator>
-);
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
+        tabBarStyle: {
+          height: theme.layout.tabBarHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: theme.spacing.sm,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen
+        name="Evaluations"
+        component={MyEvaluationsScreen}
+        options={{
+          title: 'Minhas Avaliações',
+        }}
+      />
+      <Tab.Screen
+        name="NewEvaluation"
+        component={NewEvaluationScreen}
+        options={{
+          title: 'Nova Avaliação',
+        }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={ProfileScreen}
+        options={{
+          title: 'Conta',
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
 
-// Main App Stack
-const AppStack = () => (
-  <Stack.Navigator
+// Main App Stack Component
+const AppStackComponent = () => (
+  <AppStack.Navigator
     screenOptions={{
       headerShown: false,
     }}
   >
-    <Stack.Screen name="MainTabs" component={MainTabs} />
-    <Stack.Screen
+    <AppStack.Screen name="MainTabs" component={MainTabs} />
+    <AppStack.Screen
       name="EvaluationDetail"
       component={EvaluationDetailScreen}
       options={{
@@ -109,7 +116,7 @@ const AppStack = () => (
         headerBackTitleVisible: false,
       }}
     />
-    <Stack.Screen
+    <AppStack.Screen
       name="ReportViewer"
       component={ReportViewerScreen}
       options={{
@@ -118,22 +125,20 @@ const AppStack = () => (
         headerBackTitleVisible: false,
       }}
     />
-  </Stack.Navigator>
+  </AppStack.Navigator>
 );
 
 export const AppNavigator: React.FC = () => {
-  const { isLoading } = useAuthStore();
-  
-  // Temporariamente forçando autenticação para testar o app
-  const isAuthenticated = true;
+  const { isLoading, isAuthenticated, isHydrated } = useAuthStore();
 
-  if (isLoading) {
+  // Show loading while hydrating or during auth operations
+  if (!isHydrated || isLoading) {
     return <LoadingSpinner fullScreen message="Carregando..." />;
   }
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppStack /> : <AuthStack />}
+      {isAuthenticated ? <AppStackComponent /> : <AuthStackComponent />}
     </NavigationContainer>
   );
 };

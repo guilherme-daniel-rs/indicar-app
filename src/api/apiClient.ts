@@ -35,9 +35,16 @@ class ApiClient {
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
         }
+        console.log('API Request:', {
+          method: config.method?.toUpperCase(),
+          url: config.url,
+          baseURL: config.baseURL,
+          headers: config.headers,
+        });
         return config;
       },
       (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
       }
     );
@@ -45,9 +52,21 @@ class ApiClient {
     // Response interceptor
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
+        console.log('API Response:', {
+          status: response.status,
+          url: response.config.url,
+          data: response.data,
+        });
         return response;
       },
       async (error) => {
+        console.error('API Error:', {
+          status: error.response?.status,
+          url: error.config?.url,
+          message: error.message,
+          data: error.response?.data,
+        });
+
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {

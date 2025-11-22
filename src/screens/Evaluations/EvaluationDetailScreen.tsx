@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { AppStackNavigationProp } from '@/navigation/types';
 import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
 import { Evaluation, EvaluationStatus } from '@/api/types';
+import { evaluationApi, reportApi } from '@/api/endpoints';
 import { Button } from '@/components/Button';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -39,14 +42,16 @@ const statusColors: Record<EvaluationStatus, string> = {
 };
 
 export const EvaluationDetailScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<AppStackNavigationProp>();
   const route = useRoute();
   const { evaluationId } = route.params as { evaluationId: number };
+  console.log('EvaluationDetailScreen loaded with evaluationId:', evaluationId);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const { showToast } = useUIStore();
+  const { accessToken } = useAuthStore();
 
   useEffect(() => {
     loadEvaluation();
@@ -55,7 +60,11 @@ export const EvaluationDetailScreen: React.FC = () => {
   const loadEvaluation = async () => {
     try {
       setIsLoading(true);
-      const evaluationData = await evaluationApi.getById(evaluationId);
+      if (!accessToken) {
+        showToast('error', 'Token de acesso não encontrado');
+        return;
+      }
+      const evaluationData = await evaluationApi.getById(evaluationId, accessToken);
       setEvaluation(evaluationData);
       setPhotos(evaluationData.photos?.map(photo => photo.photo_url) || []);
     } catch (error: any) {
@@ -91,7 +100,10 @@ export const EvaluationDetailScreen: React.FC = () => {
           name: `photo_${Date.now()}.jpg`,
         } as any);
 
-        await evaluationApi.uploadPhoto(evaluationId, formData);
+        if (!accessToken) {
+          throw new Error('Token de acesso não encontrado');
+        }
+        await evaluationApi.uploadPhoto(evaluationId, formData, accessToken);
       }
 
       // Reload evaluation to get updated photos
@@ -110,8 +122,12 @@ export const EvaluationDetailScreen: React.FC = () => {
     if (!evaluation?.report) return;
 
     try {
-      const response = await reportApi.getFileUrl(evaluation.report.id);
-      navigation.navigate('ReportViewer', { fileUrl: response.file_url });
+      if (!accessToken) {
+        showToast('error', 'Token de acesso não encontrado');
+        return;
+      }
+      const response = await reportApi.getFileUrl(evaluation.report.id, accessToken);
+      navigation.navigate('ReportViewer', { fileUrl: response.url });
     } catch (error: any) {
       console.error('Error getting report file:', error);
       showToast('error', 'Erro ao abrir laudo');

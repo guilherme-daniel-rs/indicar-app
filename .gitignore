@@ -137,3 +137,12 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# Project specific
+# README.md is tracked for documentation
+# CHANGELOG.md is tracked for version history
+# DEVELOPMENT.md is tracked for development guide
+# PROJECT_CONFIG.md is tracked for project configuration
+# DOCS.md is tracked for documentation index
+# .env files are ignored for security
+# node_modules/ is ignored for dependencies

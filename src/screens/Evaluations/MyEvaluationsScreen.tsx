@@ -10,9 +10,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { CombinedNavigationProp } from '@/navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
 import { Evaluation, EvaluationStatus } from '@/api/types';
+import { evaluationApi } from '@/api/endpoints';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/Button';
@@ -35,14 +39,23 @@ const statusColors: Record<EvaluationStatus, string> = {
 };
 
 export const MyEvaluationsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<CombinedNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<EvaluationStatus | 'all'>('all');
   const { showToast } = useUIStore();
+  const { accessToken } = useAuthStore();
 
   const loadEvaluations = async (refresh = false) => {
+    // Só carrega avaliações se o usuário estiver autenticado
+    if (!accessToken) {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
     try {
       if (refresh) {
         setIsRefreshing(true);
@@ -50,13 +63,9 @@ export const MyEvaluationsScreen: React.FC = () => {
         setIsLoading(true);
       }
 
-      // Temporariamente desabilitado para evitar erro de rede
-      // const params = selectedStatus !== 'all' ? { status: selectedStatus } : {};
-      // const response = await evaluationApi.getList(params);
-      // setEvaluations(response.evaluations);
-      
-      // Dados mockados para teste
-      setEvaluations([]);
+      const params = selectedStatus !== 'all' ? { status: selectedStatus } : {};
+      const response = await evaluationApi.getList(params, accessToken);
+      setEvaluations(response); // API retorna array diretamente
     } catch (error: any) {
       console.error('Error loading evaluations:', error);
       const errorMessage = error?.response?.data?.message || 'Erro ao carregar avaliações';
@@ -70,7 +79,7 @@ export const MyEvaluationsScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadEvaluations();
-    }, [selectedStatus])
+    }, [selectedStatus, accessToken])
   );
 
   const handleRefresh = () => {
@@ -174,7 +183,7 @@ export const MyEvaluationsScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {renderStatusFilter()}
 
       {evaluations.length === 0 ? (

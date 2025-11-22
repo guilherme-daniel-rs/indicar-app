@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { simpleApiClient as apiClient } from './simpleApiClient';
 import {
   LoginRequest,
   LoginResponse,
@@ -7,52 +7,73 @@ import {
   RefreshTokenResponse,
   User,
   CreateEvaluationRequest,
+  ReportFileResponse,
   Evaluation,
   EvaluationListResponse,
   UpdateEvaluationRequest,
-  PaginationParams,
+  EvaluationListParams,
   CreateReportRequest,
   Report,
   RegisterDeviceRequest,
   Device,
-  PhotoUploadResponse,
+  EvaluationPhoto,
   City,
 } from './types';
 
-// Auth endpoints
-export const authApi = {
-  login: (data: LoginRequest): Promise<LoginResponse> =>
-    apiClient.post('/auth/login', data),
-
-  signup: (data: SignupRequest): Promise<LoginResponse> =>
-    apiClient.post('/auth/signup', data),
-
-  refresh: (data: RefreshTokenRequest): Promise<RefreshTokenResponse> =>
-    apiClient.post('/auth/refresh', data),
-
-  getMe: (): Promise<User> =>
-    apiClient.get('/me'),
-
-  updateMe: (data: Partial<User>): Promise<User> =>
-    apiClient.put('/me', data),
-};
+// Auth endpoints moved to authApi.ts
 
 // Evaluation endpoints
 export const evaluationApi = {
-  create: (data: CreateEvaluationRequest): Promise<Evaluation> =>
-    apiClient.post('/evaluations', data),
+  create: async (data: CreateEvaluationRequest, accessToken: string): Promise<Evaluation> => {
+    const response = await apiClient.post('/evaluations', data, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return response.data;
+  },
 
-  getById: (id: number): Promise<Evaluation> =>
-    apiClient.get(`/evaluations/${id}`),
+  getById: (id: number, accessToken: string): Promise<Evaluation> => {
+    return apiClient.get(`/evaluations/${id}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 
-  getList: (params?: PaginationParams): Promise<EvaluationListResponse> =>
-    apiClient.get('/evaluations', { params }),
+  getList: (params?: EvaluationListParams, accessToken?: string): Promise<EvaluationListResponse> => {
+    return apiClient.get('/evaluations', {
+      params,
+      headers: accessToken ? {
+        Authorization: `Bearer ${accessToken}`,
+      } : {},
+    });
+  },
 
-  update: (id: number, data: UpdateEvaluationRequest): Promise<Evaluation> =>
-    apiClient.patch(`/evaluations/${id}`, data),
+  update: (id: number, data: UpdateEvaluationRequest, accessToken: string): Promise<Evaluation> => {
+    return apiClient.patch(`/evaluations/${id}`, data, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 
-  uploadPhoto: (evaluationId: number, formData: FormData): Promise<PhotoUploadResponse> =>
-    apiClient.upload(`/evaluations/${evaluationId}/photos`, formData),
+  uploadPhoto: (evaluationId: number, formData: FormData, accessToken: string): Promise<EvaluationPhoto> => {
+    return apiClient.post(`/evaluations/${evaluationId}/photos`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
+
+  getPhotos: (evaluationId: number, accessToken: string): Promise<EvaluationPhoto[]> => {
+    return apiClient.get(`/evaluations/${evaluationId}/photos`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 
   uploadPhotoToPresignedUrl: (presignedUrl: string, formData: FormData): Promise<void> => {
     return apiClient.put(presignedUrl, formData, {
@@ -65,24 +86,40 @@ export const evaluationApi = {
 
 // Report endpoints
 export const reportApi = {
-  create: (data: CreateReportRequest): Promise<Report> =>
-    apiClient.post('/reports', data),
+  create: (data: CreateReportRequest, accessToken: string): Promise<Report> => {
+    return apiClient.post('/reports', data, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 
-  getById: (id: number): Promise<Report> =>
-    apiClient.get(`/reports/${id}`),
+  getById: (id: number, accessToken: string): Promise<Report> => {
+    return apiClient.get(`/reports/${id}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 
-  getFileUrl: (id: number): Promise<{ file_url: string }> =>
-    apiClient.get(`/reports/${id}/file`),
+  getFileUrl: (id: number, accessToken: string): Promise<ReportFileResponse> => {
+    return apiClient.get(`/reports/${id}/file`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  },
 };
 
-// Device endpoints
-export const deviceApi = {
-  register: (data: RegisterDeviceRequest): Promise<Device> =>
-    apiClient.post('/devices', data),
-};
+// Device endpoints moved to authApi.ts
 
 // Utility endpoints
 export const utilityApi = {
-  getCities: (): Promise<City[]> =>
-    apiClient.get('/cities'),
+  getCities: (accessToken?: string): Promise<City[]> => {
+    return apiClient.get('/cities', {
+      headers: accessToken ? {
+        Authorization: `Bearer ${accessToken}`,
+      } : {},
+    });
+  },
 };

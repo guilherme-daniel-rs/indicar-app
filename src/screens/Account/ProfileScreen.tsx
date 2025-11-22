@@ -11,8 +11,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth.store';
+import { authApi } from '@/api/authApi';
 import { useUIStore } from '@/store/ui.store';
-import { authApi } from '@/api/endpoints';
 import { Button } from '@/components/Button';
 import { FormTextInput } from '@/components/FormTextInput';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -22,7 +22,7 @@ import { theme } from '@/theme';
 export const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { user, logout, setUser } = useAuthStore();
+  const { user, logout, setUser, accessToken } = useAuthStore();
   const { showToast } = useUIStore();
 
   const {
@@ -50,7 +50,11 @@ export const ProfileScreen: React.FC = () => {
   const onSubmit = async (data: UpdateProfileFormData) => {
     try {
       setIsSaving(true);
-      const updatedUser = await authApi.updateMe(data);
+      if (!accessToken) {
+        showToast('error', 'Token de acesso não encontrado');
+        return;
+      }
+      const updatedUser = await authApi.updateProfile(data, accessToken);
       setUser(updatedUser);
       showToast('success', 'Perfil atualizado com sucesso!');
     } catch (error: any) {

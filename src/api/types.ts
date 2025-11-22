@@ -3,8 +3,9 @@ export type User = {
   id: number;
   full_name: string;
   email: string;
+  phone: string;
   role: 'user' | 'evaluator' | 'admin';
-  phone?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -16,10 +17,13 @@ export type LoginRequest = {
 };
 
 export type SignupRequest = {
-  full_name: string;
   email: string;
+  full_name: string;
   password: string;
   phone?: string;
+  role: string;
+  document_id?: string;
+  bio?: string;
 };
 
 export type LoginResponse = {
@@ -35,6 +39,7 @@ export type RefreshTokenRequest = {
 export type RefreshTokenResponse = {
   access_token: string;
   refresh_token: string;
+  user: User;
 };
 
 // Evaluation types
@@ -43,10 +48,13 @@ export type EvaluationStatus = 'created' | 'accepted' | 'in_progress' | 'complet
 export type Evaluation = {
   id: number;
   city_id: number;
+  evaluator_id: number;
+  requester_id: number;
   vehicle_make: string;
   vehicle_model: string;
-  vehicle_year?: number;
-  notes?: string;
+  vehicle_plate: string;
+  vehicle_year: number;
+  notes: string;
   status: EvaluationStatus;
   created_at: string;
   updated_at: string;
@@ -57,6 +65,10 @@ export type Evaluation = {
 export type EvaluationPhoto = {
   id: number;
   evaluation_id: number;
+  s3_bucket: string;
+  s3_key: string;
+  content_type: string;
+  size_bytes: number;
   photo_url: string;
   created_at: string;
 };
@@ -65,50 +77,57 @@ export type CreateEvaluationRequest = {
   city_id: number;
   vehicle_make: string;
   vehicle_model: string;
-  vehicle_year?: number;
-  notes?: string;
+  vehicle_plate: string;
+  vehicle_year: number;
+  notes: string;
 };
 
 export type UpdateEvaluationRequest = {
-  status?: EvaluationStatus;
+  evaluator_id?: number;
   notes?: string;
+  status?: EvaluationStatus;
 };
 
-export type EvaluationListResponse = {
-  evaluations: Evaluation[];
-  total: number;
-  page: number;
-  limit: number;
+export type EvaluationListParams = {
+  status?: EvaluationStatus;
 };
+
+export type EvaluationListResponse = Evaluation[];
 
 // Report types
 export type Report = {
   id: number;
   evaluation_id: number;
+  evaluator_id: number;
+  summary: string;
   status: 'draft' | 'finalized';
-  file_url?: string;
   created_at: string;
   updated_at: string;
 };
 
 export type CreateReportRequest = {
   evaluation_id: number;
-  status: 'draft' | 'finalized';
+  summary: string;
+};
+
+export type ReportFileResponse = {
+  url: string;
 };
 
 // Device types
 export type DevicePlatform = 'ios' | 'android';
 
 export type RegisterDeviceRequest = {
-  platform: DevicePlatform;
   device_token: string;
+  platform: DevicePlatform;
 };
 
 export type Device = {
   id: number;
   user_id: number;
-  platform: DevicePlatform;
   device_token: string;
+  platform: DevicePlatform;
+  last_seen_at: string;
   created_at: string;
 };
 

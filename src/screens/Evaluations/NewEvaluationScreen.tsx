@@ -12,8 +12,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
+import { CombinedNavigationProp } from '@/navigation/types';
 import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
 import { City } from '@/api/types';
+import { evaluationApi } from '@/api/endpoints';
 import { Button } from '@/components/Button';
 import { FormTextInput } from '@/components/FormTextInput';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -21,11 +24,12 @@ import { createEvaluationSchema, CreateEvaluationFormData } from '@/utils/valida
 import { theme } from '@/theme';
 
 export const NewEvaluationScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<CombinedNavigationProp>();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
   const { showToast } = useUIStore();
+  const { accessToken } = useAuthStore();
 
   const {
     control,
@@ -38,6 +42,7 @@ export const NewEvaluationScreen: React.FC = () => {
       city_id: 0,
       vehicle_make: '',
       vehicle_model: '',
+      vehicle_plate: '',
       vehicle_year: undefined,
       notes: '',
     },
@@ -50,16 +55,25 @@ export const NewEvaluationScreen: React.FC = () => {
   const loadCities = async () => {
     try {
       setIsLoading(true);
-      // Temporariamente desabilitado para evitar erro de rede
-      // const citiesData = await utilityApi.getCities();
-      // setCities(citiesData);
-      
-      // Dados mockados para teste
-      setCities([
+      // Lista de cidades hardcoded (endpoint /cities não disponível na API)
+      const citiesData: City[] = [
         { id: 1, name: 'São Paulo', state: 'SP', country: 'Brasil' },
         { id: 2, name: 'Rio de Janeiro', state: 'RJ', country: 'Brasil' },
         { id: 3, name: 'Belo Horizonte', state: 'MG', country: 'Brasil' },
-      ]);
+        { id: 4, name: 'Salvador', state: 'BA', country: 'Brasil' },
+        { id: 5, name: 'Brasília', state: 'DF', country: 'Brasil' },
+        { id: 6, name: 'Fortaleza', state: 'CE', country: 'Brasil' },
+        { id: 7, name: 'Manaus', state: 'AM', country: 'Brasil' },
+        { id: 8, name: 'Curitiba', state: 'PR', country: 'Brasil' },
+        { id: 9, name: 'Recife', state: 'PE', country: 'Brasil' },
+        { id: 10, name: 'Porto Alegre', state: 'RS', country: 'Brasil' },
+        { id: 11, name: 'Goiânia', state: 'GO', country: 'Brasil' },
+        { id: 12, name: 'Belém', state: 'PA', country: 'Brasil' },
+        { id: 13, name: 'Guarulhos', state: 'SP', country: 'Brasil' },
+        { id: 14, name: 'Campinas', state: 'SP', country: 'Brasil' },
+        { id: 15, name: 'São Luís', state: 'MA', country: 'Brasil' },
+      ];
+      setCities(citiesData);
     } catch (error: any) {
       console.error('Error loading cities:', error);
       showToast('error', 'Erro ao carregar cidades');
@@ -71,14 +85,15 @@ export const NewEvaluationScreen: React.FC = () => {
   const onSubmit = async (data: CreateEvaluationFormData) => {
     try {
       setIsSubmitting(true);
-      // Temporariamente desabilitado para evitar erro de rede
-      // const evaluation = await evaluationApi.create(data);
-      // showToast('success', 'Avaliação criada com sucesso!');
-      // navigation.navigate('EvaluationDetail', { evaluationId: evaluation.id });
-      
-      // Simulação de sucesso
-      showToast('success', 'Avaliação criada com sucesso! (Modo teste)');
-      console.log('Dados da avaliação:', data);
+      if (!accessToken) {
+        showToast('error', 'Token de acesso não encontrado');
+        return;
+      }
+      const evaluation = await evaluationApi.create(data, accessToken);
+      console.log('Evaluation created:', evaluation);
+      showToast('success', 'Avaliação criada com sucesso!');
+      console.log('Navigating to EvaluationDetail with ID:', evaluation.id);
+      navigation.navigate('EvaluationDetail', { evaluationId: evaluation.id });
     } catch (error: any) {
       console.error('Error creating evaluation:', error);
       const errorMessage = error?.response?.data?.message || 'Erro ao criar avaliação';
@@ -174,10 +189,27 @@ export const NewEvaluationScreen: React.FC = () => {
 
           <Controller
             control={control}
+            name="vehicle_plate"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormTextInput
+                label="Placa do veículo"
+                placeholder="Ex: ABC-1234"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.vehicle_plate?.message}
+                autoCapitalize="characters"
+                required
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
             name="vehicle_year"
             render={({ field: { onChange, onBlur, value } }) => (
               <FormTextInput
-                label="Ano do veículo (opcional)"
+                label="Ano do veículo"
                 placeholder="Ex: 2020"
                 value={value?.toString() || ''}
                 onChangeText={(text) => onChange(text ? parseInt(text, 10) : undefined)}
@@ -185,6 +217,7 @@ export const NewEvaluationScreen: React.FC = () => {
                 error={errors.vehicle_year?.message}
                 keyboardType="numeric"
                 maxLength={4}
+                required
               />
             )}
           />
@@ -194,7 +227,7 @@ export const NewEvaluationScreen: React.FC = () => {
             name="notes"
             render={({ field: { onChange, onBlur, value } }) => (
               <FormTextInput
-                label="Observações (opcional)"
+                label="Observações"
                 placeholder="Informações adicionais sobre o veículo"
                 value={value || ''}
                 onChangeText={onChange}
@@ -203,6 +236,7 @@ export const NewEvaluationScreen: React.FC = () => {
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                required
               />
             )}
           />

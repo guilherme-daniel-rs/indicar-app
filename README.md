@@ -1,54 +1,62 @@
-# IndiCar - App Mobile
+# IndiCar - App de Avaliações Técnicas de Veículos
 
-App React Native para solicitação e acompanhamento de avaliações técnicas de veículos.
+## 📱 Sobre o Projeto
 
-## 🚀 Tecnologias
+O IndiCar é um aplicativo React Native desenvolvido com Expo para avaliações técnicas de veículos, integração de fotos e geração de relatórios. O app se conecta com um backend Go existente e oferece funcionalidades completas para técnicos e avaliadores.
 
-- **React Native** com **Expo** (Managed Workflow)
-- **TypeScript** para tipagem estática
-- **React Navigation** para navegação
-- **Zustand** para gerenciamento de estado
-- **Axios** para requisições HTTP
-- **React Hook Form** + **Zod** para formulários e validação
-- **Expo Image Picker** para seleção de fotos
-- **Expo Notifications** para push notifications
+## 🚀 Tecnologias Utilizadas
 
-## 📱 Funcionalidades
+- **React Native** - Framework para desenvolvimento mobile
+- **Expo SDK 53** - Plataforma para desenvolvimento universal
+- **TypeScript** - Superset do JavaScript com tipagem estática
+- **React Navigation** - Navegação (Stack + Bottom Tabs)
+- **Zustand** - Gerenciamento de estado global
+- **Axios** - Cliente HTTP com interceptors
+- **react-hook-form + Zod** - Gerenciamento e validação de formulários
+- **expo-image-picker** - Captura e seleção de fotos
+- **expo-notifications** - Notificações push
+- **expo-secure-store** - Armazenamento seguro de tokens
 
-### Autenticação
-- Login e cadastro de usuários
-- Armazenamento seguro de tokens (JWT)
-- Refresh automático de tokens
-- Logout com confirmação
+## 📁 Estrutura do Projeto
 
-### Avaliações
-- Criar nova avaliação (cidade, marca, modelo, ano, observações)
-- Listar avaliações com filtros por status
-- Visualizar detalhes da avaliação
-- Anexar fotos (múltiplas)
-- Acompanhar status da avaliação
+```
+src/
+├── api/                    # Configuração e endpoints da API
+│   ├── apiClient.ts       # Cliente Axios com interceptors
+│   ├── endpoints.ts       # Funções de API
+│   └── types.ts          # Tipos TypeScript para API
+├── components/            # Componentes reutilizáveis
+│   ├── Button.tsx
+│   ├── FormTextInput.tsx
+│   ├── PhotoPicker.tsx
+│   ├── EmptyState.tsx
+│   ├── LoadingSpinner.tsx
+│   └── ToastContainer.tsx
+├── navigation/            # Configuração de navegação
+│   └── AppNavigator.tsx
+├── screens/              # Telas da aplicação
+│   ├── Auth/            # Telas de autenticação
+│   ├── Evaluations/     # Telas de avaliações
+│   ├── Reports/         # Telas de relatórios
+│   └── Account/         # Telas de perfil
+├── store/               # Gerenciamento de estado
+│   ├── auth.store.ts   # Store de autenticação
+│   └── ui.store.ts     # Store de UI (toasts, etc.)
+├── theme/               # Tema e estilos
+│   └── index.ts
+└── utils/               # Utilitários
+    ├── validators.ts    # Schemas Zod
+    └── permissions.ts   # Gerenciamento de permissões
+```
 
-### Laudos
-- Visualizar laudos em WebView
-- Download de laudos
-- Abertura no navegador nativo
-
-### Notificações Push
-- Registro automático do token do dispositivo
-- Suporte para iOS e Android
-
-### Perfil
-- Visualizar e editar dados pessoais
-- Gerenciar conta
-
-## 🛠️ Configuração do Projeto
+## 🔧 Configuração e Instalação
 
 ### Pré-requisitos
 
-- Node.js (versão 16 ou superior)
-- npm ou yarn
-- Expo CLI (`npm install -g @expo/cli`)
-- Conta no Expo (para builds)
+- Node.js (versão 18 ou superior)
+- Expo CLI
+- Expo Go app no dispositivo móvel
+- Backend Go rodando (para funcionalidades completas)
 
 ### Instalação
 
@@ -61,8 +69,6 @@ App React Native para solicitação e acompanhamento de avaliações técnicas d
 2. **Instale as dependências**
    ```bash
    npm install
-   # ou
-   yarn install
    ```
 
 3. **Configure as variáveis de ambiente**
@@ -71,195 +77,149 @@ App React Native para solicitação e acompanhamento de avaliações técnicas d
    ```
    
    Edite o arquivo `.env` com suas configurações:
-   ```env
-   EXPO_PUBLIC_API_BASE_URL=https://sua-api.com:8080
-   EXPO_PUBLIC_PROJECT_ID=seu-project-id-expo
+   ```
+   EXPO_PUBLIC_API_BASE_URL=https://sua-api.com
+   EXPO_PUBLIC_PROJECT_ID=seu-project-id
    ```
 
 4. **Inicie o servidor de desenvolvimento**
    ```bash
-   npm start
-   # ou
-   yarn start
+   npx expo start --port 8082
    ```
 
-### Estrutura do Projeto
+5. **Execute no dispositivo**
+   - Escaneie o QR code com o Expo Go
+   - Ou use um emulador Android/iOS
 
-```
-src/
-├── api/                    # Camada de API
-│   ├── apiClient.ts       # Cliente Axios com interceptors
-│   ├── endpoints.ts       # Endpoints da API
-│   └── types.ts           # Tipos TypeScript
-├── components/            # Componentes reutilizáveis
-│   ├── Button.tsx
-│   ├── FormTextInput.tsx
-│   ├── PhotoPicker.tsx
-│   ├── EmptyState.tsx
-│   ├── LoadingSpinner.tsx
-│   └── ToastContainer.tsx
-├── navigation/            # Configuração de navegação
-│   └── AppNavigator.tsx
-├── screens/              # Telas da aplicação
-│   ├── Auth/
-│   ├── Evaluations/
-│   ├── Reports/
-│   └── Account/
-├── store/                # Gerenciamento de estado
-│   ├── auth.store.ts
-│   └── ui.store.ts
-├── theme/                # Tema e estilos
-│   └── index.ts
-└── utils/                # Utilitários
-    ├── validators.ts
-    └── permissions.ts
-```
+## 📋 Funcionalidades Implementadas
 
-## 🔧 Configuração da API
+### ✅ MVP Funcional
+- [x] **Estrutura base** - Navegação e componentes
+- [x] **Autenticação** - Telas de login/signup (mockadas)
+- [x] **Avaliações** - Lista, criação e detalhes (mockadas)
+- [x] **Fotos** - Componente de seleção de imagens
+- [x] **Relatórios** - Visualização de laudos
+- [x] **Perfil** - Tela de conta do usuário
+- [x] **Responsividade** - Layout adaptável para diferentes dispositivos
+- [x] **Tema** - Sistema de cores e estilos consistente
 
-O app espera que a API backend tenha os seguintes endpoints:
+### 🔄 Em Desenvolvimento
+- [ ] **Integração com API** - Conexão real com backend
+- [ ] **Notificações push** - Sistema de notificações
+- [ ] **Persistência** - Armazenamento seguro de tokens
+- [ ] **Validação de formulários** - Schemas Zod completos
 
-### Autenticação
-- `POST /auth/login` - Login do usuário
-- `POST /auth/signup` - Cadastro do usuário
-- `POST /auth/refresh` - Renovar token de acesso
-- `GET /me` - Dados do usuário logado
-- `PUT /me` - Atualizar dados do usuário
+## 🛠️ Desenvolvimento e Debugging
 
-### Avaliações
-- `POST /evaluations` - Criar nova avaliação
-- `GET /evaluations` - Listar avaliações (com filtros)
-- `GET /evaluations/{id}` - Detalhes da avaliação
-- `PATCH /evaluations/{id}` - Atualizar avaliação
-- `POST /evaluations/{id}/photos` - Upload de fotos
+### Problemas Resolvidos Durante o Desenvolvimento
 
-### Laudos
-- `POST /reports` - Criar laudo
-- `GET /reports/{id}` - Dados do laudo
-- `GET /reports/{id}/file` - URL do arquivo do laudo
+1. **Incompatibilidade de SDK**
+   - **Problema**: Expo SDK incompatível entre app e dispositivo
+   - **Solução**: Atualização para SDK 53 e dependências compatíveis
 
-### Dispositivos
-- `POST /devices` - Registrar token de push
+2. **Erros de PlatformConstants**
+   - **Problema**: `PlatformConstants could not be found`
+   - **Solução**: Remoção de imports desnecessários e simplificação do código
 
-### Utilitários
-- `GET /cities` - Listar cidades disponíveis
+3. **Problemas de Responsividade**
+   - **Problema**: Header sobrepondo status bar, tab bar sobrepondo botões nativos
+   - **Solução**: Implementação de `useSafeAreaInsets` para áreas seguras
 
-## 📱 Build e Deploy
+4. **Ciclos de Dependência**
+   - **Problema**: `Require cycle` warnings
+   - **Solução**: Movimentação de imports para dentro dos componentes
 
-### Desenvolvimento
+5. **Erros de TypeScript**
+   - **Problema**: Propriedades não existentes em tipos
+   - **Solução**: Correção de tipos e uso de hooks de navegação
+
+### Comandos Úteis
 
 ```bash
-# Iniciar em modo desenvolvimento
-npm start
+# Limpar cache do Expo
+npx expo start --clear
 
-# Executar no iOS
-npm run ios
+# Limpar cache do Watchman
+watchman watch-del '/Users/guilherme/Projects/Indicar/indicar-app'
+watchman watch-project '/Users/guilherme/Projects/Indicar/indicar-app'
 
-# Executar no Android
-npm run android
+# Verificar erros de linting
+npx eslint src/
+
+# Formatar código
+npx prettier --write src/
 ```
 
-### Build de Produção
+## 🔗 Integração com Backend
 
-```bash
-# Build para Android
-npm run build:android
+### Endpoints da API
 
-# Build para iOS
-npm run build:ios
-```
+- **Autenticação**: `/auth/login`, `/auth/refresh`
+- **Avaliações**: `/evaluations`, `/evaluations/:id`
+- **Fotos**: `/evaluations/:id/photos`, `/photos/presigned-url`
+- **Relatórios**: `/reports/:id`, `/reports/:id/presigned-url`
+- **Dispositivos**: `/devices` (para notificações push)
 
-## 🧪 Testes Manuais
+### Configuração de Interceptors
 
-### Fluxo de Login
-1. Abra o app
-2. Digite email e senha válidos
-3. Verifique se o login é realizado com sucesso
-4. Confirme navegação para a tela principal
+O `apiClient.ts` está configurado com:
+- Interceptor de requisição para adicionar token de autorização
+- Interceptor de resposta para renovação automática de tokens
+- Tratamento de erros 401 com refresh token
 
-### Criação de Avaliação
-1. Acesse "Nova Avaliação"
-2. Preencha todos os campos obrigatórios
-3. Selecione uma cidade
-4. Submeta o formulário
-5. Verifique se a avaliação é criada e aparece na lista
+## 📱 Testes e Validação
 
-### Upload de Fotos
-1. Acesse os detalhes de uma avaliação
-2. Toque em "Adicionar fotos"
-3. Selecione fotos da galeria ou tire uma nova
-4. Verifique se as fotos são enviadas com sucesso
-5. Confirme se as fotos aparecem na tela
+### Testes Manuais Recomendados
 
-### Visualização de Laudo
-1. Acesse uma avaliação com laudo disponível
-2. Toque em "Ver Laudo"
-3. Verifique se o laudo abre corretamente
-4. Teste as opções de abrir no navegador e baixar
+1. **Navegação**
+   - [ ] Login → Nova Avaliação → Detalhes
+   - [ ] Navegação entre tabs
+   - [ ] Botões de voltar funcionando
 
-### Notificações Push
-1. Aceite as permissões de notificação
-2. Verifique se o token é registrado no backend
-3. Teste o recebimento de notificações
+2. **Formulários**
+   - [ ] Criação de nova avaliação
+   - [ ] Validação de campos obrigatórios
+   - [ ] Seleção de fotos
 
-## 🔒 Segurança
+3. **Responsividade**
+   - [ ] Header respeitando status bar
+   - [ ] Tab bar acima dos botões nativos
+   - [ ] Conteúdo visível em diferentes tamanhos de tela
 
-- Tokens JWT armazenados de forma segura com Expo SecureStore
-- Refresh automático de tokens
-- Validação de formulários com Zod
-- Interceptors Axios para tratamento de erros de autenticação
+## 🚀 Próximos Passos
 
-## 🎨 UI/UX
+1. **Restaurar funcionalidades de API**
+   - Conectar com backend real
+   - Implementar autenticação real
+   - Carregar dados reais
 
-- Design system consistente com tema customizável
-- Componentes reutilizáveis
-- Estados de loading e empty states
-- Feedback visual com toasts
-- Navegação intuitiva com tabs e stack
+2. **Implementar notificações push**
+   - Configurar expo-notifications
+   - Registrar dispositivo no backend
+   - Tratar notificações recebidas
 
-## 🐛 Troubleshooting
+3. **Melhorar UX/UI**
+   - Animações e transições
+   - Estados de loading mais refinados
+   - Feedback visual melhorado
 
-### Problemas Comuns
-
-1. **Erro de conexão com API**
-   - Verifique se a URL da API está correta no `.env`
-   - Confirme se o servidor backend está rodando
-
-2. **Erro de permissões de câmera/galeria**
-   - Verifique as permissões no dispositivo
-   - Teste em dispositivo físico (não funciona no simulador)
-
-3. **Problemas com notificações push**
-   - Confirme se o projeto Expo está configurado corretamente
-   - Verifique se o token está sendo enviado para o backend
-
-4. **Erro de build**
-   - Limpe o cache: `expo start -c`
-   - Reinstale as dependências: `rm -rf node_modules && npm install`
-
-### Logs de Debug
-
-```bash
-# Ver logs detalhados
-expo start --dev-client
-
-# Logs específicos do React Native
-npx react-native log-ios
-npx react-native log-android
-```
+4. **Testes e Qualidade**
+   - Testes unitários
+   - Testes de integração
+   - CI/CD pipeline
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Este projeto é privado e proprietário da IndiCar.
 
-## 🤝 Contribuição
+## 👥 Equipe
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+- **Desenvolvimento**: Engenheiro Front-end Sênior
+- **Backend**: Equipe Go (existente)
+- **Design**: Equipe de UX/UI
 
-## 📞 Suporte
+---
 
-Para suporte, entre em contato através dos canais oficiais do projeto.
+**Última atualização**: Dezembro 2024  
+**Versão**: 1.0.0-alpha  
+**Status**: Em desenvolvimento ativo

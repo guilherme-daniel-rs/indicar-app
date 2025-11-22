@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import * as SecureStore from 'expo-secure-store';
 import { User, LoginRequest, SignupRequest } from '@/api/types';
-import { authApi } from '@/api/endpoints';
+import { authApi } from '@/api/authApi';
 
 interface AuthState {
   // State
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   accessToken: string | null;
   refreshToken: string | null;
   user: User | null;
@@ -21,6 +22,7 @@ interface AuthState {
   setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: User) => void;
   clearAuth: () => void;
+  setHydrated: () => void;
 }
 
 // Custom storage for secure token storage
@@ -48,13 +50,16 @@ const secureStorage = {
   },
 };
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
-  // Initial state
-  isAuthenticated: true, // Temporariamente forçando autenticação
-  isLoading: false,
-  accessToken: null,
-  refreshToken: null,
-  user: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      isAuthenticated: false,
+      isLoading: false,
+      isHydrated: false,
+      accessToken: null,
+      refreshToken: null,
+      user: null,
 
   // Actions
   login: async (credentials: LoginRequest) => {
@@ -123,9 +128,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   loadMe: async () => {
+    const { accessToken } = get();
+    if (!accessToken) {
+      throw new Error('No access token available');
+    }
+    
     set({ isLoading: true });
     try {
-      const user = await authApi.getMe();
+      const user = await authApi.getMe(accessToken);
       set({ user, isLoading: false });
     } catch (error) {
       set({ isLoading: false });
@@ -153,4 +163,34 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       user: null,
     });
   },
-}));
+
+  setHydrated: () => {
+    set({ isHydrated: true });
+  },
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => secureStorage),
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        user: state.user,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Verifica se há tokens válidos após hidratação
+          if (state.accessToken && state.refreshToken) {
+            state.isAuthenticated = true;
+          } else {
+            state.isAuthenticated = false;
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
+          }
+          state.setHydrated();
+        }
+      },
+    }
+  )
+);
