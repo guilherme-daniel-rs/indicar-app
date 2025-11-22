@@ -58,7 +58,8 @@ export type Evaluation = {
   status: EvaluationStatus;
   created_at: string;
   updated_at: string;
-  photos?: EvaluationPhoto[];
+  photos?: EvaluationPhoto[]; // Array completo de fotos (pode não estar presente na lista)
+  photos_count?: number; // Contagem de fotos (pode estar presente na lista em vez do array)
   report?: Report;
 };
 

@@ -65,6 +65,10 @@ export const MyEvaluationsScreen: React.FC = () => {
 
       const params = selectedStatus !== 'all' ? { status: selectedStatus } : {};
       const response = await evaluationApi.getList(params, accessToken);
+      // Log para debug: verificar estrutura da resposta
+      if (response.length > 0) {
+        console.log('Sample evaluation from list:', JSON.stringify(response[0], null, 2));
+      }
       setEvaluations(response); // API retorna array diretamente
     } catch (error: any) {
       console.error('Error loading evaluations:', error);
@@ -131,7 +135,7 @@ export const MyEvaluationsScreen: React.FC = () => {
         <View style={styles.photosInfo}>
           <Ionicons name="camera" size={16} color={theme.colors.textTertiary} />
           <Text style={styles.photosText}>
-            {item.photos?.length || 0} fotos
+            {item.photos_count ?? item.photos?.length ?? 0} fotos
           </Text>
         </View>
 
