@@ -13,6 +13,9 @@ import {
 // Auth API functions
 export const authApi = {
   login: (credentials: LoginRequest): Promise<LoginResponse> => {
+    console.log('Logging in with credentials:', credentials);
+    console.log('API Base URL:', process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080');
+    console.log('Full URL will be:', `${process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080'}/auth/login`);
     return apiClient.post('/auth/login', credentials);
   },
 

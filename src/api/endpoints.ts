@@ -25,12 +25,12 @@ import {
 // Evaluation endpoints
 export const evaluationApi = {
   create: async (data: CreateEvaluationRequest, accessToken: string): Promise<Evaluation> => {
-    const response = await apiClient.post('/evaluations', data, {
+    // simpleApiClient.post já retorna response.data automaticamente
+    return apiClient.post('/evaluations', data, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    return response.data;
   },
 
   getById: (id: number, accessToken: string): Promise<Evaluation> => {

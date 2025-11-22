@@ -16,7 +16,7 @@ import { CombinedNavigationProp } from '@/navigation/types';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 import { City } from '@/api/types';
-import { evaluationApi } from '@/api/endpoints';
+import { evaluationApi, utilityApi } from '@/api/endpoints';
 import { Button } from '@/components/Button';
 import { FormTextInput } from '@/components/FormTextInput';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -50,33 +50,22 @@ export const NewEvaluationScreen: React.FC = () => {
 
   useEffect(() => {
     loadCities();
-  }, []);
+  }, [accessToken]);
 
   const loadCities = async () => {
     try {
       setIsLoading(true);
-      // Lista de cidades hardcoded (endpoint /cities não disponível na API)
-      const citiesData: City[] = [
-        { id: 1, name: 'São Paulo', state: 'SP', country: 'Brasil' },
-        { id: 2, name: 'Rio de Janeiro', state: 'RJ', country: 'Brasil' },
-        { id: 3, name: 'Belo Horizonte', state: 'MG', country: 'Brasil' },
-        { id: 4, name: 'Salvador', state: 'BA', country: 'Brasil' },
-        { id: 5, name: 'Brasília', state: 'DF', country: 'Brasil' },
-        { id: 6, name: 'Fortaleza', state: 'CE', country: 'Brasil' },
-        { id: 7, name: 'Manaus', state: 'AM', country: 'Brasil' },
-        { id: 8, name: 'Curitiba', state: 'PR', country: 'Brasil' },
-        { id: 9, name: 'Recife', state: 'PE', country: 'Brasil' },
-        { id: 10, name: 'Porto Alegre', state: 'RS', country: 'Brasil' },
-        { id: 11, name: 'Goiânia', state: 'GO', country: 'Brasil' },
-        { id: 12, name: 'Belém', state: 'PA', country: 'Brasil' },
-        { id: 13, name: 'Guarulhos', state: 'SP', country: 'Brasil' },
-        { id: 14, name: 'Campinas', state: 'SP', country: 'Brasil' },
-        { id: 15, name: 'São Luís', state: 'MA', country: 'Brasil' },
-      ];
+      // Carregar cidades da API
+      console.log('Loading cities from API...');
+      const citiesData = await utilityApi.getCities(accessToken || undefined);
+      console.log('Cities loaded:', citiesData.length, 'cities');
       setCities(citiesData);
     } catch (error: any) {
       console.error('Error loading cities:', error);
-      showToast('error', 'Erro ao carregar cidades');
+      const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao carregar cidades';
+      showToast('error', errorMessage);
+      // Fallback: manter array vazio se a API falhar
+      setCities([]);
     } finally {
       setIsLoading(false);
     }
@@ -135,6 +124,7 @@ export const NewEvaluationScreen: React.FC = () => {
                     selectedValue={value}
                     onValueChange={onChange}
                     style={styles.picker}
+                    dropdownIconColor={theme.colors.textSecondary}
                   >
                     <Picker.Item label="Selecione uma cidade" value={0} />
                     {cities.map((city) => (
@@ -294,9 +284,13 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.white,
+    justifyContent: 'center',
+    paddingRight: theme.spacing.sm,
   },
   picker: {
     height: theme.layout.inputHeight,
+    paddingLeft: theme.spacing.md,
+    paddingRight: theme.spacing.xl, // Espaço extra para o ícone dropdown
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,

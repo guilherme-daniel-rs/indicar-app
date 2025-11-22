@@ -49,9 +49,10 @@ export const EvaluationDetailScreen: React.FC = () => {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const { showToast } = useUIStore();
-  const { accessToken } = useAuthStore();
+  const { accessToken, user } = useAuthStore();
 
   useEffect(() => {
     loadEvaluation();
@@ -152,6 +153,132 @@ export const EvaluationDetailScreen: React.FC = () => {
     );
   };
 
+  const handleAcceptEvaluation = async () => {
+    if (!accessToken || !user) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    if (user.role !== 'evaluator') {
+      showToast('error', 'Apenas avaliadores podem aceitar avaliações');
+      return;
+    }
+
+    Alert.alert(
+      'Aceitar Avaliação',
+      'Tem certeza que deseja aceitar esta avaliação?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aceitar',
+          onPress: async () => {
+            try {
+              setIsUpdatingStatus(true);
+              // Enviar apenas evaluator_id - a API muda o status para 'accepted' automaticamente
+              await evaluationApi.update(
+                evaluationId,
+                {
+                  evaluator_id: user.id,
+                },
+                accessToken
+              );
+              showToast('success', 'Avaliação aceita com sucesso!');
+              await loadEvaluation();
+            } catch (error: any) {
+              console.error('Error accepting evaluation:', error);
+              const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao aceitar avaliação';
+              showToast('error', errorMessage);
+            } finally {
+              setIsUpdatingStatus(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleStartEvaluation = async () => {
+    if (!accessToken || !user || !evaluation) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    if (evaluation.evaluator_id !== user.id) {
+      showToast('error', 'Apenas o avaliador designado pode iniciar a avaliação');
+      return;
+    }
+
+    Alert.alert(
+      'Iniciar Avaliação',
+      'Tem certeza que deseja iniciar esta avaliação?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Iniciar',
+          onPress: async () => {
+            try {
+              setIsUpdatingStatus(true);
+              await evaluationApi.update(
+                evaluationId,
+                { status: 'in_progress' },
+                accessToken
+              );
+              showToast('success', 'Avaliação iniciada com sucesso!');
+              await loadEvaluation();
+            } catch (error: any) {
+              console.error('Error starting evaluation:', error);
+              const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao iniciar avaliação';
+              showToast('error', errorMessage);
+            } finally {
+              setIsUpdatingStatus(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCompleteEvaluation = async () => {
+    if (!accessToken || !user || !evaluation) {
+      showToast('error', 'Token de acesso não encontrado');
+      return;
+    }
+
+    if (evaluation.evaluator_id !== user.id) {
+      showToast('error', 'Apenas o avaliador designado pode concluir a avaliação');
+      return;
+    }
+
+    Alert.alert(
+      'Concluir Avaliação',
+      'Tem certeza que deseja concluir esta avaliação?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Concluir',
+          onPress: async () => {
+            try {
+              setIsUpdatingStatus(true);
+              await evaluationApi.update(
+                evaluationId,
+                { status: 'completed' },
+                accessToken
+              );
+              showToast('success', 'Avaliação concluída com sucesso!');
+              await loadEvaluation();
+            } catch (error: any) {
+              console.error('Error completing evaluation:', error);
+              const errorMessage = error?.response?.data?.message || error?.response?.data?.error || 'Erro ao concluir avaliação';
+              showToast('error', errorMessage);
+            } finally {
+              setIsUpdatingStatus(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (isLoading) {
     return <LoadingSpinner fullScreen message="Carregando avaliação..." />;
   }
@@ -190,6 +317,19 @@ export const EvaluationDetailScreen: React.FC = () => {
         <Text style={styles.createdAt}>
           Criada em {new Date(evaluation.created_at).toLocaleDateString('pt-BR')}
         </Text>
+
+        {/* Evaluator Info */}
+        {evaluation.evaluator_id && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Avaliador</Text>
+            <View style={styles.infoCard}>
+              <Ionicons name="person" size={20} color={theme.colors.primary} />
+              <Text style={styles.infoText}>
+                Avaliador ID: {evaluation.evaluator_id}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Notes */}
         {evaluation.notes && (
@@ -259,7 +399,51 @@ export const EvaluationDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Actions */}
+        {/* Actions - Accept Evaluation */}
+        {evaluation.status === 'created' && user?.role === 'evaluator' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ações</Text>
+            <Button
+              title="Aceitar Avaliação"
+              onPress={handleAcceptEvaluation}
+              fullWidth
+              loading={isUpdatingStatus}
+              disabled={isUpdatingStatus}
+            />
+          </View>
+        )}
+
+        {/* Actions - Start Evaluation */}
+        {evaluation.status === 'accepted' &&
+          user?.id === evaluation.evaluator_id && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ações</Text>
+              <Button
+                title="Iniciar Avaliação"
+                onPress={handleStartEvaluation}
+                fullWidth
+                loading={isUpdatingStatus}
+                disabled={isUpdatingStatus}
+              />
+            </View>
+          )}
+
+        {/* Actions - Complete Evaluation */}
+        {evaluation.status === 'in_progress' &&
+          user?.id === evaluation.evaluator_id && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ações</Text>
+              <Button
+                title="Concluir Avaliação"
+                onPress={handleCompleteEvaluation}
+                fullWidth
+                loading={isUpdatingStatus}
+                disabled={isUpdatingStatus}
+              />
+            </View>
+          )}
+
+        {/* Actions - Request Report */}
         {evaluation.status === 'completed' && !evaluation.report && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Ações</Text>
@@ -381,5 +565,19 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  infoCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...theme.shadows.sm,
+  },
+  infoText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+    marginLeft: theme.spacing.sm,
+    fontWeight: theme.typography.fontWeight.medium,
   },
 });
